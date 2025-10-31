@@ -1,0 +1,11 @@
+{
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#1E1E2E",
+    "titleBar.activeForeground": "#FFFFFF",
+    "titleBar.inactiveBackground": "#2C2C3E",
+    "titleBar.inactiveForeground": "#CCCCCC",
+    // "activityBar.background": "#252537",
+    "statusBar.background": "#FF0000"
+  },
+  "workbench.colorTheme": "Abyss"
+}
