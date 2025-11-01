@@ -35,10 +35,30 @@ async function run() {
     // created database
     const db = client.db('smart_db');
     const productsCollection = db.collection('products');
+    const bidsCollection = db.collection('bids');
+    const userCollection = db.collection('user_db');
 
     // get all added products from database
     app.get('/products', async (req, res) => {
-      const cursor = productsCollection.find();
+      // findAll product
+      //   const cursor = productsCollection.find();
+
+      // find Product as sorting
+      //   const cursor = productsCollection.find().sort({ price_min: 1 });
+
+      // limit data
+      //   const cursor = productsCollection.find().sort({ price_min: 1 }).limit(1);
+
+      // akta data theke sb kichu hide kore kichu akta dekhanu
+      //   const cursor = productsCollection.find().sort({ price_min: 1 }).limit(1);
+
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.email = email;
+      }
+      const cursor = productsCollection.find(query);
+
       const result = await cursor.toArray();
       res.send(result);
     });
@@ -80,6 +100,40 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await productsCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // bids collection
+    app.get('/bids', async (req, res) => {
+      const email = req.query.email;
+      const query = {};
+      if (email) {
+        query.buyer_email = email;
+      }
+
+      const cursor = bidsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.post('/bids', async (req, res) => {
+      const newBids = req.body;
+      const result = await bidsCollection.insertOne(newBids);
+      res.send(result);
+    });
+
+    app.post('/users', async (req, res) => {
+      const newUser = req.body;
+
+      // check email for do not duplicator
+      const email = req.body.email;
+      const query = { email: email };
+      const existingUser = userCollection.findOne(query);
+      if (existingUser) {
+        res.send({ message: 'User already exist' });
+      } else {
+        const result = await userCollection.insertOne(newUser);
+        res.send(result);
+      }
     });
 
     // Send a ping to confirm a successful connection
