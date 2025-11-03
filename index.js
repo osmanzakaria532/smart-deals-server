@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -9,9 +10,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// mongodb connection url With configuration (userName: smart_deals_db and password: Hz6iHEFjvXr6f1pv)
-const uri =
-  'mongodb+srv://smart_deals_db:Hz6iHEFjvXr6f1pv@cluster0.daqctd4.mongodb.net/?appName=Cluster0';
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.daqctd4.mongodb.net/?appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -63,18 +62,33 @@ async function run() {
       res.send(result);
     });
 
-    // get single a product from database
-    app.get('/products/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await productsCollection.findOne(query);
-      res.send(result);
-    });
-
     // get latest product
     app.get('/latest-products', async (req, res) => {
       const cursor = productsCollection.find().sort({ created_at: -1 }).limit(6);
       const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // get single a product from database
+    app.get('/products/:id', async (req, res) => {
+      const id = req.params.id;
+
+      try {
+        const isObjectId = ObjectId.isValid(id);
+        let result = null;
+        // 3) না পেলে string `_id` ধরেও একবার ট্রাই করো
+        if (!result) {
+          result = await productsCollection.findOne({ _id: id });
+        }
+        // 4) ফলাফল না পেলে 404 ফেরত দাও (না হলে ব্রাউজারে ফাঁকা/null দেখায়)
+        if (!result) {
+          return res.status(404).json({ message: 'Product not found', id });
+        }
+        // 5) সফল হলে JSON
+        return res.status(200).json(result);
+      } catch {}
+      const query = { _id: new ObjectId(id) };
+      const result = await productsCollection.findOne(query);
       res.send(result);
     });
 
@@ -109,7 +123,7 @@ async function run() {
       res.send(result);
     });
 
-    // bids collection
+    // bids collection // bids related apis
     app.get('/bids', async (req, res) => {
       const email = req.query.email;
       const query = {};
@@ -122,11 +136,60 @@ async function run() {
       res.send(result);
     });
 
+    // avid duplicate data in database
+    // app.get('/bids', async (req, res) => {
+    //   const email = req.query.email;
+    //   const query = {};
+    //   if (email) {
+    //     query.buyer_email = email;
+    //   }
+
+    //   const cursor = bidsCollection.find(query);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
+
+    app.get('/bids', async (req, res) => {
+      const email = req.query.email;
+      // email diye match kore bids find korar process
+      const query = {};
+      if (email) {
+        query.buyer_email = email;
+      }
+      const cursor = bidsCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // add bids in database
     app.post('/bids', async (req, res) => {
       const newBids = req.body;
       const result = await bidsCollection.insertOne(newBids);
       res.send(result);
     });
+
+    // find single bids in database with id
+    app.get('/products/bids/:productId', async (req, res) => {
+      const productId = req.params.productId;
+      const query = { product: productId };
+      const cursor = bidsCollection.find(query).sort({ bid_price: -1 });
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    // delete bids
+    app.delete('/bids/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bidsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    // app.post('/bids', async (req, res) => {
+    //   const newBid = req.body;
+    //   const result = await bidsCollection.insertOne(newBid);
+    //   res.send(result);
+    // });
 
     app.post('/users', async (req, res) => {
       const newUser = req.body;
